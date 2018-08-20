@@ -1,0 +1,58 @@
+queue:
+  name: Hosted VS2017
+  demands: 
+  - msbuild
+  - visualstudio
+  - vstest
+
+
+#Your build definition references an undefined variable named ‘Parameters.solution’. Create or edit the build definition for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+#Your build definition references the ‘BuildPlatform’ variable, which you’ve selected to be settable at queue time. Create or edit the build definition for this YAML file, define the variable on the Variables tab, and then select the option to make it settable at queue time. See https://go.microsoft.com/fwlink/?linkid=865971
+#Your build definition references the ‘BuildConfiguration’ variable, which you’ve selected to be settable at queue time. Create or edit the build definition for this YAML file, define the variable on the Variables tab, and then select the option to make it settable at queue time. See https://go.microsoft.com/fwlink/?linkid=865971
+#Your build definition references an undefined variable named ‘Parameters.ArtifactName’. Create or edit the build definition for this YAML file, define the variable on the Variables tab. See https://go.microsoft.com/fwlink/?linkid=865972
+steps:
+- task: NuGetCommand@2
+  displayName: NuGet restore
+  inputs:
+    restoreSolution: '$(Parameters.solution)'
+
+- task: SonarSource.sonarqube.15B84CA1-B62F-4A2A-A403-89B77A063157.SonarQubePrepare@4
+  displayName: Prepare analysis on SonarQube
+  inputs:
+    SonarQube: Sonar
+    projectKey: ASP.NET
+    projectName: ASP.NET
+  enabled: false
+
+- task: VSBuild@1
+  displayName: Build solution
+  inputs:
+    solution: 'Demo-Project/Demo-Project.sln'
+    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=false /p:SkipInvalidConfigurations=true /p:PackageLocation="$(build.artifactstagingdirectory)\\" '
+    platform: '$(BuildPlatform)'
+    configuration: '$(BuildConfiguration)'
+
+- task: VSTest@2
+  displayName: VsTest - testAssemblies
+
+- task: SonarSource.sonarqube.6D01813A-9589-4B15-8491-8164AEB38055.SonarQubeAnalyze@4
+  displayName: Run Code Analysis
+  enabled: false
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Artifact
+  inputs:
+    ArtifactName: '$(Parameters.ArtifactName)'
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Artifact Deployment script
+  inputs:
+    PathtoPublish: 'Script/Deployment.ps1'
+    ArtifactName: Script
+
+- task: PublishBuildArtifacts@1
+  displayName: Publish Artifact Selenium Test
+  inputs:
+    PathtoPublish: UnitTestProject2
+    ArtifactName: Selenium
+
